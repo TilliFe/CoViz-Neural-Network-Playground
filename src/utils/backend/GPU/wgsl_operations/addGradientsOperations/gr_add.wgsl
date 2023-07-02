@@ -10,5 +10,5 @@ fn gr_add(gId : vec3u, currTensor : u32, childTensor: u32){
     }
 
     let index = gId.x * curr_n + gId.y;
-    ping.entries[curr_GradientData + index] += ping.entries[child_GradientData + index];
+    ping.entries[curr_GradientData + index] = ping.entries[child_GradientData + index];
 }

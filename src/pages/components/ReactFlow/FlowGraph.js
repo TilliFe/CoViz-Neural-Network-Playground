@@ -45,8 +45,6 @@ const rfStyle = {
   backgroundColor: 'rgb(255,255,255)',
 };
 
-const nodeTypes = { TensorNode: TensorNode };
-
 const CustomEdge = (props) => {
   const { animated } = props;
 
@@ -54,6 +52,11 @@ const CustomEdge = (props) => {
   const stroke = animated ? 'rgb(140,140,140)' : 'rgb(140,140,140)';
 
   return <BezierEdge {...props} style={{ stroke, strokeWidth: 2 }} />;
+};
+
+const nodeTypes = { TensorNode: TensorNode };
+const edgeTypes = {
+  custom: CustomEdge,
 };
 
 export default function Flow() {
@@ -187,10 +190,10 @@ export default function Flow() {
       return;
     }
 
-    console.log(nodesAll);
-    console.log(edgesAll);
-    console.log(heighestId);
-    console.log(lastTensorId);
+    // console.log(nodesAll);
+    // console.log(edgesAll);
+    // console.log(heighestId);
+    // console.log(lastTensorId);
 
     // set the cols size appropriately
     for (let node of nodesAll) {
@@ -217,10 +220,32 @@ export default function Flow() {
       }
     }
 
+    console.log(nodes)
+
     // add additional nodes that are not rendered sucha as: nodes of Dense layer
     for (let node of nodesAll) {
       if (node.data.type == 'input' || node.data.type == 'isTrue') {
         node.data.requiresGradient = false;
+      }
+
+      if (node.data.type == 'mult') {
+        const parentEdgeRight = edgesAll.filter(
+          (edge) => edge.target === node.id && edge.targetHandle == 'Right'
+        )[0];
+        const rightParent = nodesAll.filter(
+          (nde) => nde.id === parentEdgeRight.source
+        )[0];
+        rightParent.isRight = true;
+      }
+
+      if (node.data.type == 'add') {
+        const parentEdgeRight = edgesAll.filter(
+          (edge) => edge.target === node.id && edge.targetHandle == 'Right'
+        )[0];
+        const rightParent = nodesAll.filter(
+          (nde) => nde.id === parentEdgeRight.source
+        )[0];
+        rightParent.isRight = true;
       }
 
       if (node.data.type == 'Dense') {
@@ -267,7 +292,7 @@ export default function Flow() {
         };
         nodesAll.push(W);
 
-        if (parentNode.data.addBias) {
+        if (node.data.addBias) {
           id = heighestNodeId++;
           const W_x_X = {
             id: id.toString(),
@@ -485,7 +510,7 @@ export default function Flow() {
               type: 'mult',
               initialization: 'zeros',
               rows: node.data.rows,
-              cols: node.data.cols,
+              cols: batchSize,
               requiresGradient: true,
               parents: [W.id, Number(parentNodeId)],
               children: node.children,
@@ -612,7 +637,7 @@ export default function Flow() {
       }
       tensors.push(tensor);
     }
-    console.log(tensors);
+    // console.log(tensors);
     setTensorNodes(tensors);
     resetLastTensor();
   }, [clicked, lastTensorId]);
@@ -739,7 +764,9 @@ export default function Flow() {
   return (
     <div style={{ height: '100%', width: '100%' }} ref={reactFlowWrapper}>
       <ReactFlow
+        nodeTypes={nodeTypes}
         minZoom={0.1}
+        maxZoom={10}
         nodes={nodes}
         edges={edges}
         onNodesChange={onNodesChange}
@@ -750,11 +777,10 @@ export default function Flow() {
         onNodeDoubleClick={onNodeDoubleClick}
         onEdgeDoubleClick={onEdgeDoubleClick}
         onPaneClick={onPaneClick}
-        nodeTypes={nodeTypes}
         style={rfStyle}
         snapToGrid
         snapGrid={[40, 40]}
-        edgeTypes={{ custom: CustomEdge }}
+        edgeTypes={edgeTypes}
         fitView="true"
       >
         <Controls />

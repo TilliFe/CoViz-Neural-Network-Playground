@@ -71,7 +71,7 @@ export class Model {
     res.addParent(right.id);
     this.tensors[left.id].addChild(this.numTensors);
     this.tensors[right.id].addChild(this.numTensors);
-    this.tensors[right.id].isRightMultiplicator = true;
+    this.tensors[right.id].isRightMultiplicator = 1;
     this.tensors.push(res);
     return res;
   }

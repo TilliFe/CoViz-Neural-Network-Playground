@@ -64,21 +64,21 @@ function TensorNode({ data, isConnectable, id, modelId }) {
       ? useState(0.01)
       : predefinedModel === 'Classification1' ||
         predefinedModel === 'Classification1raw'
-      ? useState(0.5)
+      ? useState(0.1)
       : useState(0.01);
   const [momentum, setMomentum] =
     predefinedModel === 'Regression1' || predefinedModel === 'Regression1raw'
       ? useState(0.96)
       : predefinedModel === 'Classification1' ||
         predefinedModel === 'Classification1raw'
-      ? useState(0.9)
+      ? useState(0.95)
       : useState(0.9);
   const [batchSize, setBatchSize] =
-    predefinedModel === 'Regression1' || predefinedModel === 'Regression1raw'
+    (predefinedModel === 'Regression1' || predefinedModel === 'Regression1raw')
       ? useState(64)
-      : predefinedModel === 'Classification1' ||
-        predefinedModel === 'Classification1raw'
-      ? useState(48)
+      : (predefinedModel === 'Classification1' ||
+        predefinedModel === 'Classification1raw')
+      ? useState(98)
       : useState(1);
   const [displayedDataType, setShowDisplayedDataType] =
     predefinedModel === 'Regression1' || predefinedModel === 'Regression1raw'
@@ -202,10 +202,10 @@ function TensorNode({ data, isConnectable, id, modelId }) {
     setTemp(temp + 1);
   }, [dataSet]);
 
-  useEffect(() => {
-    if (!isLast) {
-      return;
-    }
+  React.useEffect(() => {
+    // if (!isLast) {
+    //   return;
+    // }
     setModelIterations(iterations);
     setModelLearningRate(learningRate);
     setModelMomentum(momentum);

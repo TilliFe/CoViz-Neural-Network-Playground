@@ -143,8 +143,8 @@ export class Tensor {
   cols = 1;
   metaDims = [1];
   data = [];
-  requiresGradient: boolean;
-  isRightMultiplicator = false;
+  requiresGradient: boolean
+  isRightMultiplicator :  number = 0;
   gradientData = [];
   velocity_momentum = [];
   velocity_RMSProp = [];
@@ -155,6 +155,8 @@ export class Tensor {
 
   partner_rows = 1;
   partner_cols = 1;
+
+  partner_id = -1;
 
   isInput = false;
   isOutput = false;

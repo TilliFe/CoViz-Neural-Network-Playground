@@ -59,8 +59,10 @@ const addGradients =
 // update data operations
 import updateData from '../wgsl_operations/updateDataOperations/updateData.wgsl';
 
-// main function import
+// cleanup gradients operations
+import cleanupGradients from '../wgsl_operations/cleanupOperations/cleanupGradients.wgsl';
 
+// main function import
 import main from '../wgsl_operations/main.wgsl';
 
 // others
@@ -202,35 +204,35 @@ export async function MatMul(
         binding: 2,
         visibility: GPUShaderStage.COMPUTE,
         buffer: {
-          type: 'storage',
+          type: 'read-only-storage',
         },
       },
       {
         binding: 3,
         visibility: GPUShaderStage.COMPUTE,
         buffer: {
-          type: 'storage',
+          type: 'read-only-storage',
         },
       },
       {
         binding: 4,
         visibility: GPUShaderStage.COMPUTE,
         buffer: {
-          type: 'storage',
+          type: 'read-only-storage',
         },
       },
       {
         binding: 5,
         visibility: GPUShaderStage.COMPUTE,
         buffer: {
-          type: 'storage',
+          type: 'read-only-storage',
         },
       },
       {
         binding: 6,
         visibility: GPUShaderStage.COMPUTE,
         buffer: {
-          type: 'storage',
+          type: 'read-only-storage',
         },
       },
       {
@@ -305,6 +307,7 @@ export async function MatMul(
       partialDerivatives +
       addGradients +
       updateData +
+      cleanupGradients +
       main,
   });
 
@@ -334,13 +337,13 @@ export async function MatMul(
   let trueValues_all = [];
   let errorsArray = [];
 
-  var numExtraIterations = 1;
+  var numExtraIterations = 2;
   if (model.batchSize < 50) {
-    numExtraIterations = 10;
+    numExtraIterations = 15;
   } else if (model.batchSize < 100) {
-    numExtraIterations = 5;
+    numExtraIterations = 10;
   } else if (model.batchSize < 200) {
-    numExtraIterations = 2;
+    numExtraIterations = 10;
   }
   const framerate = 20;
 
@@ -367,7 +370,7 @@ export async function MatMul(
       0,
       inputData.byteLength
     );
-    let inputTensorId = data.tensorInputId;
+    let inputTensorId = await data.tensorInputId;
     let commandEncoder = device.createCommandEncoder();
     let passEncoder = commandEncoder.beginComputePass();
     let control = new Float32Array([
@@ -401,7 +404,7 @@ export async function MatMul(
       0,
       trueValues.byteLength
     );
-    let trueValuesTensorId = data.tensorTrueId;
+    let trueValuesTensorId = await data.tensorTrueId;
     commandEncoder = device.createCommandEncoder();
     passEncoder = commandEncoder.beginComputePass();
     control = new Float32Array([
@@ -427,8 +430,41 @@ export async function MatMul(
     gpuCommands = commandEncoder.finish();
     device.queue.submit([gpuCommands]);
 
+    // compute type 5 - cleanup gradient ---------------------------------------------------------------------------------
+    
+    // for (let i = 3; i < numUpdates; ++i) {
+    //   const currTensorId = backwardTape[i];
+
+    //   let commandEncoder = device.createCommandEncoder();
+    //   let passEncoder = commandEncoder.beginComputePass();
+    //   let control = new Float32Array([
+    //     currTensorId,
+    //     -1 /* curr parent of interest */,
+    //     -1 /*curr child of interest */,
+    //     5 /* compute type */,
+    //     iteration,
+    //   ]);
+    //   device.queue.writeBuffer(
+    //     controlBuffer,
+    //     0,
+    //     control.buffer,
+    //     0,
+    //     control.byteLength
+    //   );
+    //   passEncoder.setPipeline(computePipeline);
+    //   passEncoder.setBindGroup(0, bindGroup);
+
+    //   let workgroupCountX = Math.ceil(model.tensors[currTensorId].rows / 16);
+    //   let workgroupCountY = Math.ceil(model.tensors[currTensorId].cols / 16);
+    //   passEncoder.dispatchWorkgroups(workgroupCountX, workgroupCountY);
+    //   passEncoder.end();
+
+    //   let gpuCommands = commandEncoder.finish();
+    //   device.queue.submit([gpuCommands]);
+    // }
+
     // compute type 1 - compute forward -------------------------------------------------------------------------------------------------------------------------------------------------------
-    const numInferences = forwardTape.length;
+    const numInferences = await forwardTape.length;
     for (let i = 0; i < numInferences; ++i) {
       const currTensorId = forwardTape[i];
       let commandEncoder = device.createCommandEncoder();
@@ -502,99 +538,120 @@ export async function MatMul(
       let trueVals = [].concat(...trueValues_all);
       let avgError = 0;
 
+      console.log(errorsArray);
+
       for (let error of errorsArray) {
         avgError += error;
       }
+
       if (errorsArray.length > 0) {
         avgError /= errorsArray.length;
       }
+      // console.log("avgError: " + avgError + " at iteration: " + iteration + " with framerate: " + framerate + " and numExtraIterations: " + numExtraIterations + " and errorsArray.length: " + errorsArray.length)
 
-      if (iteration >= framerate - 1) {
+      // if (iteration >= framerate - 1) {
         await setPredVals(predVals);
         await setTrueVals(trueVals);
         await setAvgError(avgError);
         await setXVals(xVals);
-      }
+      // }
 
       predValues_all = [];
       trueValues_all = [];
       xValues_all = [];
+      errorsArray = [];
     }
 
     // compute type 2 - compute partial derivatives
-    const numPds = gradientTape.length / 2;
-    for (let i = 0; i < numPds; i++) {
-      const currTensorId = gradientTape[2 * i + 1];
-      const currParentId = gradientTape[2 * i];
-
-      let commandEncoder = device.createCommandEncoder();
-      let passEncoder = commandEncoder.beginComputePass();
-      let control = new Float32Array([
-        currTensorId,
-        currParentId /* curr parent of interest */,
-        -1 /*curr child of interest */,
-        2 /* compute type */,
-        iteration,
-      ]);
-      device.queue.writeBuffer(
-        controlBuffer,
-        0,
-        control.buffer,
-        0,
-        control.byteLength
-      );
-      passEncoder.setPipeline(computePipeline);
-      passEncoder.setBindGroup(0, bindGroup);
-
-      let workgroupCountX = 1;
-      let workgroupCountY = 1;
-
-      if (model.tensors[currTensorId].type == 1) {
-        // addition
-        workgroupCountX = Math.ceil(model.tensors[currTensorId].rows / 16);
-        workgroupCountY = Math.ceil(model.tensors[currParentId].cols / 16);
-      } else if (model.tensors[currTensorId].type == 2) {
-        // multiplication
-        let isRightMultiplicator =
-          model.tensors[currParentId].isRightMultiplicator;
-        if (isRightMultiplicator) {
-          workgroupCountX = Math.ceil(model.tensors[currTensorId].rows / 16);
-          workgroupCountY = Math.ceil(model.tensors[currParentId].rows / 16);
-        } else {
-          workgroupCountX = Math.ceil(model.tensors[currParentId].cols / 16);
-          workgroupCountY = Math.ceil(model.tensors[currTensorId].cols / 16);
-        }
-      } else if (model.tensors[currTensorId].type == 3) {
-        // ReLU
-        // workgroupCountX = Math.ceil(  model.tensors[ currTensorId ].rows / 16);
-        // workgroupCountY = Math.ceil(  model.tensors[ currParentId ].cols / 16);
-      } else if (model.tensors[currTensorId].type == 4) {
-        //softmax
-        workgroupCountX = Math.ceil(model.tensors[currParentId].rows / 16);
-        workgroupCountY = Math.ceil(model.tensors[currParentId].cols / 16);
-      } else if (model.tensors[currTensorId].type == 5) {
-        // CE
-        workgroupCountX = Math.ceil(model.tensors[currParentId].rows / 16);
-        workgroupCountY = Math.ceil(model.tensors[currParentId].cols / 16);
-      } else if (model.tensors[currTensorId].type == 7) {
-        // CE
-        workgroupCountX = Math.ceil(model.tensors[currParentId].rows / 16);
-        workgroupCountY = Math.ceil(model.tensors[currParentId].cols / 16);
-      }
-
-      passEncoder.dispatchWorkgroups(workgroupCountX, workgroupCountY);
-      passEncoder.end();
-
-      let gpuCommands = commandEncoder.finish();
-      device.queue.submit([gpuCommands]);
-    }
+    // const numPds = gradientTape.length / 2;
+    // for (let i = 0; i < numPds; ++i) {
+    // const currTensorId = gradientTape[2 * i + 1];
+    // const currParentId = gradientTape[2 * i];
+    // let commandEncoder = device.createCommandEncoder();
+    // let passEncoder = commandEncoder.beginComputePass();
+    // let control = new Float32Array([
+    //   currTensorId,
+    //   currParentId /* curr parent of interest */,
+    //   -1 /*curr child of interest */,
+    //   2 /* compute type */,
+    //   iteration,
+    // ]);
+    // device.queue.writeBuffer(
+    //   controlBuffer,
+    //   0,
+    //   control.buffer,
+    //   0,
+    //   control.byteLength
+    // );
+    // passEncoder.setPipeline(computePipeline);
+    // passEncoder.setBindGroup(0, bindGroup);
+    // let workgroupCountX = 1;
+    // let workgroupCountY = 1;
+    // // if (model.tensors[currTensorId].type == 0) {
+    // //   // none
+    // //   workgroupCountX = Math.ceil(model.tensors[currTensorId].rows / 16);
+    // //   workgroupCountY = Math.ceil(model.tensors[currTensorId].cols / 16);
+    // // } else
+    // if (model.tensors[currTensorId].type == 1) {
+    //   // addition
+    //   // workgroupCountX = Math.ceil(model.tensors[currTensorId].rows / 16);
+    //   // workgroupCountY = Math.ceil(model.tensors[currTensorId].cols / 16);
+    //   continue;
+    // } else if (model.tensors[currTensorId].type == 2) {
+    //   // multiplication
+    //   continue;
+    //   // let isRightMultiplicator =
+    //   //   model.tensors[currParentId].isRightMultiplicator;
+    //   // if (isRightMultiplicator) {
+    //   //   workgroupCountX = Math.ceil(model.tensors[currTensorId].rows / 16);
+    //   //   workgroupCountY = Math.ceil(model.tensors[currParentId].rows / 16);
+    //   // } else {
+    //   //   workgroupCountX = Math.ceil(model.tensors[currParentId].cols / 16);
+    //   //   workgroupCountY = Math.ceil(model.tensors[currTensorId].cols / 16);
+    //   // }
+    //   // console.log("TensorID: " + currTensorId + " ParentID: " + currParentId + " isRightMultiplicator: " + isRightMultiplicator + " workgroupCountX: " + workgroupCountX * 16 + " workgroupCountY: " + workgroupCountY * 16)
+    // } else if (model.tensors[currTensorId].type == 3) {
+    //   // ReLU
+    //   continue;
+    // } else if (model.tensors[currTensorId].type == 4) {
+    //   continue;
+    //   //softmax
+    //   // workgroupCountX = Math.ceil(model.tensors[currParentId].rows / 16);
+    //   // workgroupCountY = Math.ceil(model.tensors[currParentId].cols / 16);
+    // } else if (model.tensors[currTensorId].type == 5) {
+    //   // CE
+    //   workgroupCountX = Math.ceil(model.tensors[currParentId].rows / 16);
+    //   workgroupCountY = Math.ceil(model.tensors[currParentId].cols / 16);
+    // } else if (model.tensors[currTensorId].type == 7) {
+    //   // MSE
+    //   workgroupCountX = Math.ceil(model.tensors[currParentId].rows / 16);
+    //   workgroupCountY = Math.ceil(model.tensors[currParentId].cols / 16);
+    // } else if (model.tensors[currTensorId].type == 8) {
+    //   // ???
+    //   workgroupCountX = Math.ceil(model.tensors[currParentId].rows / 16);
+    //   workgroupCountY = Math.ceil(model.tensors[currParentId].cols / 16);
+    // }
+    // passEncoder.dispatchWorkgroups(workgroupCountX, workgroupCountY);
+    // passEncoder.end();
+    // let gpuCommands = commandEncoder.finish();
+    // device.queue.submit([gpuCommands]);
+    // }
 
     // compute type 3 - compute and add gradients
-    const numGrds = gradientTape.length / 2;
-    for (let i = 0; i < numGrds; ++i) {
+    const numGrds = await gradientTape.length / 2;
+    for (let i = 0; i < numGrds; i++) {
       const currTensorId = gradientTape[2 * i];
       const currChildId = gradientTape[2 * i + 1];
 
+      // if(model.tensors[currChildId].type == 2) {
+      // console.log(" ");
+      // console.log("currTensorType: " + model.tensors[currTensorId].type + " currChildType: " + model.tensors[currChildId].type);
+      // console.log("currTensorId: " + currTensorId + " currChildId: " + currChildId);
+      // console.log("partnerTensorId: " + model.tensors[currTensorId].partner_id);
+      // console.log("curr_m = " + model.tensors[currTensorId].rows + " curr_n = " + model.tensors[currTensorId].cols);
+      // console.log("partner_m = " + model.tensors[currTensorId].partner_rows + " partner_n = " + model.tensors[currTensorId].partner_cols);
+      // console.log("child_m = " + model.tensors[currChildId].rows + " child_n = " + model.tensors[currChildId].cols);
+      // }
       let commandEncoder = device.createCommandEncoder();
       let passEncoder = commandEncoder.beginComputePass();
       let control = new Float32Array([
@@ -624,7 +681,7 @@ export async function MatMul(
     }
 
     // compute type 4 - update data
-    const numUpdates = backwardTape.length;
+    const numUpdates = await backwardTape.length;
     for (let i = 3; i < numUpdates; ++i) {
       const currTensorId = backwardTape[i];
 
@@ -658,7 +715,7 @@ export async function MatMul(
   }
 
   // await setBreakTraining(false);
-  stopLearning.curren = false;
+  stopLearning.current = false;
   await setBreakTraining(false);
   await setEdgesActive(false);
 

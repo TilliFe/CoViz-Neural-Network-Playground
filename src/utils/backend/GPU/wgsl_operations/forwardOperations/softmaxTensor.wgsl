@@ -10,7 +10,7 @@ fn softmaxTensor(gId : vec3u, t : u32){
     }
 
     let resultCell = vec2(gId.x, gId.y);
-    var add = f32(0.0);
+    var add = f32(0);
     for (var i = 0u; i < curr_m; i = i + 1u) {
         let idx = parentSingle_DataFirstIndex + resultCell.y + i * curr_n;  // sum column wise
         add = add + exp(ping.entries[idx]);
@@ -25,4 +25,9 @@ fn softmaxTensor(gId : vec3u, t : u32){
             ping.entries[idxRes] = f32(0);
         }
     }
+
+    // clean up the gradient data
+    let index = gId.y + gId.x * curr_n;
+    let curr_GradientData = u32(offset.tensor[t].gradientData);
+    ping.entries[curr_GradientData + index] = f32(0);
 }

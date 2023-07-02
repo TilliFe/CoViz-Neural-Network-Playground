@@ -20,10 +20,11 @@ function setUpModel(
 ) {
   if (tensors.length == 0) {
     return;
-  }
+  }    
+
 
   const model = new Model();
-  model.numTensors = tensors.length - 1;
+  model.numTensors = tensors.length;
 
   for (let i = 0; i < tensors.length; ++i) {
     const type = tensors[i].type;
@@ -47,10 +48,12 @@ function setUpModel(
       model.lastTensor = tensorId;
     }
     if (tensors[i].isInput) {
+      tensor.isInput = true;
       data.setInputTensor(tensor);
       tensor.requiresGradient = false;
     }
     if (tensors[i].isTrue) {
+      tensor.isTrue = true;
       data.setTrueTensor(tensor);
       model.trueTensor = tensorId;
       tensor.requiresGradient = false;
@@ -69,7 +72,7 @@ function setUpModel(
   // find largest m or n
   let maxBlockSize: number;
   maxBlockSize = 0;
-  for (let i = 0; i < model.numTensors + 1; i++) {
+  for (let i = 0; i < model.numTensors; i++) {
     if (model.tensors[i].rows > maxBlockSize) {
       maxBlockSize = model.tensors[i].rows;
     }
@@ -79,20 +82,30 @@ function setUpModel(
   }
 
   // init partial Derivatives to zero with proper lengths
-  for (let i = 0; i < model.numTensors + 1; i++) {
+  for (let i = 0; i < model.numTensors; i++) {
     // copy
     if (model.tensors[i].type == 0) {
-      continue;
+      model.tensors[i].partialDerivativeLeft = new Array<number>(1).fill(0);
+      model.tensors[i].partialDerivativeRight = new Array<number>(1).fill(0);
+      // continue;
     }
 
     // add
     else if (model.tensors[i].type == 1) {
       const par1 = model.tensors[i].parents[0];
+      const par2 = model.tensors[i].parents[1];
+      const m = model.tensors[par1].rows;
       const n = model.tensors[par1].cols;
-      model.tensors[i].partialDerivativeLeft = new Array<number>(n * n).fill(0);
-      model.tensors[i].partialDerivativeRight = new Array<number>(n * n).fill(
-        0
-      );
+      model.tensors[i].partialDerivativeLeft = new Array<number>(1).fill(0);
+      model.tensors[i].partialDerivativeRight = new Array<number>(1).fill(0);
+      model.tensors[par1].isRightMultiplicator = 0;
+      model.tensors[par2].isRightMultiplicator = 1;
+      model.tensors[par1].partner_rows = Number(m);
+      model.tensors[par1].partner_cols = Number(n);
+      model.tensors[par1].partner_id = Number(par2);
+      model.tensors[par2].partner_rows = Number(m);
+      model.tensors[par2].partner_cols = Number(n);
+      model.tensors[par2].partner_id = Number(par1);
     }
 
     // multiply
@@ -102,19 +115,28 @@ function setUpModel(
       const m = model.tensors[par1].rows;
       const n = model.tensors[par1].cols; // ( = model.tensors[par2].rows  )
       const k = model.tensors[par2].cols;
-      model.tensors[i].partialDerivativeLeft = new Array<number>(k * n).fill(0);
-      model.tensors[i].partialDerivativeRight = new Array<number>(m * n).fill(
-        0
-      );
+      model.tensors[i].partialDerivativeLeft = new Array<number>(1).fill(0);
+      model.tensors[i].partialDerivativeRight = new Array<number>(1).fill(0);
+      model.tensors[par1].partner_rows = Number(n);
+      model.tensors[par1].partner_cols = Number(k);
+      model.tensors[par1].partner_id = Number(par2);
+      model.tensors[par2].partner_rows = Number(m);
+      model.tensors[par2].partner_cols = Number(n);
+      model.tensors[par2].partner_id = Number(par1);
+      model.tensors[par1].isRightMultiplicator = 0;
+      model.tensors[par2].isRightMultiplicator = 1;
     }
+
+
 
     // ReLU
     else if (model.tensors[i].type == 3) {
       const par1 = model.tensors[i].parents[0];
       const m = model.tensors[par1].rows;
       const n = model.tensors[par1].cols;
-      model.tensors[i].partialDerivativeLeft = new Array<number>(m * n).fill(0);
+      model.tensors[i].partialDerivativeLeft = new Array<number>(1).fill(0);
       model.tensors[i].partialDerivativeRight = new Array<number>(1).fill(0);
+      // model.tensors[par1].isRightMultiplicator = 0;
     }
 
     // softmax
@@ -122,21 +144,27 @@ function setUpModel(
       const par1 = model.tensors[i].parents[0];
       const m = model.tensors[par1].rows;
       const n = model.tensors[par1].cols;
-      model.tensors[i].partialDerivativeLeft = new Array<number>(m * n).fill(0);
+      model.tensors[i].partialDerivativeLeft = new Array<number>(1).fill(0);
       model.tensors[i].partialDerivativeRight = new Array<number>(1).fill(0);
+      // model.tensors[par1].isRightMultiplicator = 0;
     }
 
     // CE
     else if (model.tensors[i].type == 5) {
       const par1 = model.tensors[i].parents[0];
-      // const m = model.tensors[par1].rows;
+      const par2 = model.tensors[i].parents[1];
+      const m = model.tensors[par1].rows;
       const n = model.tensors[par1].cols;
-      model.tensors[i].partialDerivativeLeft = new Array<number>(n * n).fill(0);
-      model.tensors[i].partialDerivativeRight = new Array<number>(n * n).fill(
-        0
-      );
+      model.tensors[i].partialDerivativeLeft = new Array<number>(1).fill(0);
+      model.tensors[i].partialDerivativeRight = new Array<number>(1).fill(0);
+      model.tensors[par1].partner_rows = Number(m);
+      model.tensors[par1].partner_cols = Number(n);
+      model.tensors[par1].partner_id = Number(par2);
+      model.tensors[par2].partner_rows = Number(m);
+      model.tensors[par2].partner_cols = Number(n);
+      model.tensors[par2].partner_id = Number(par1);
     }
-
+    
     // OneHot
     else if (model.tensors[i].type == 6) {
     }
@@ -144,32 +172,31 @@ function setUpModel(
     // MSE
     else if (model.tensors[i].type == 7) {
       const par1 = model.tensors[i].parents[0];
-      // const m = model.tensors[par1].rows;
+      const par2 = model.tensors[i].parents[1];
+      const m = model.tensors[par1].rows;
       const n = model.tensors[par1].cols;
-      model.tensors[i].partialDerivativeLeft = new Array<number>(n * n).fill(0);
-      model.tensors[i].partialDerivativeRight = new Array<number>(n * n).fill(
-        0
-      );
+      model.tensors[i].partialDerivativeLeft = new Array<number>(1).fill(0);
+      model.tensors[i].partialDerivativeRight = new Array<number>(1).fill(0);
+      model.tensors[par1].partner_id = Number(par2);
+      model.tensors[par2].partner_id = Number(par1);
+      model.tensors[par1].isRightMultiplicator = 0;
+      model.tensors[par2].isRightMultiplicator = 1;
     }
 
     // conv2d
     else if (model.tensors[i].type == 8) {
-      const par1 = model.tensors[i].parents[0]; // is X
-      const par2 = model.tensors[i].parents[1]; // is kernel
-      const m = model.tensors[par1].rows;
-      const n = model.tensors[par1].cols;
-      const m_k = model.tensors[par2].rows;
-      const n_k = model.tensors[par2].cols;
-      model.tensors[i].partialDerivativeLeft = new Array<number>(
-        m_k * n_k
-      ).fill(0); // derivateive will be X
-      model.tensors[i].partialDerivativeRight = new Array<number>(m * n).fill(
-        0
-      ); // derivate will be rotate180(kernel)
+      // const par1 = model.tensors[i].parents[0]; // is X
+      // const par2 = model.tensors[i].parents[1]; // is kernel
+      // const m = model.tensors[par1].rows;
+      // const n = model.tensors[par1].cols;
+      // const m_k = model.tensors[par2].rows;
+      // const n_k = model.tensors[par2].cols;
+      // model.tensors[i].partialDerivativeLeft = new Array<number>(1).fill(0);
+      // model.tensors[i].partialDerivativeRight = new Array<number>(1).fill(0);
     }
   }
 
-  console.log(model);
+  // console.log(model);
 
   let flatData = [];
   const offsets = []; // where does each tensor start in the flattened array
@@ -180,7 +207,7 @@ function setUpModel(
   tensorOffsets.push(0); // set to total number of floats after completely filled
   tensorOffsets.push(maxBlockSize);
 
-  for (let i = 0; i < model.numTensors + 1; i++) {
+  for (let i = 0; i < model.numTensors; i++) {
     offsets.push(offset); // tensor i starts at index offset in flatData
 
     flatData.push(model.tensors[i].type);
@@ -188,6 +215,9 @@ function setUpModel(
     flatData.push(model.tensors[i].requiresGradient);
     flatData.push(model.tensors[i].rows);
     flatData.push(model.tensors[i].cols);
+    flatData.push(model.tensors[i].partner_rows);
+    flatData.push(model.tensors[i].partner_cols);
+    flatData.push(model.tensors[i].partner_id);
     flatData = flatData.concat(Array.from(model.tensors[i].data));
     flatData = flatData.concat(Array.from(model.tensors[i].gradientData));
     flatData = flatData.concat(Array.from(model.tensors[i].velocity_momentum));
@@ -217,6 +247,9 @@ function setUpModel(
       ++offset,
       ++offset, // m (rows)
       ++offset, // n (cols)
+      ++offset, //  (partner_rows)
+      ++offset, //  (partner_cols)
+      ++offset, //  (partner_id)
       offset + model.tensors[i].data.length,
       offset +
         model.tensors[i].data.length +
@@ -228,29 +261,35 @@ function setUpModel(
       offset +
         model.tensors[i].data.length +
         model.tensors[i].gradientData.length +
-        model.tensors[i].velocity_momentum.length * 2, // times 2 because we have the velocity_RMSProp as well
+        model.tensors[i].velocity_momentum
+          .length /* times 2 because we have the velocity_RMSProp as well */ +
+        model.tensors[i].velocity_momentum.length,
       offset +
         model.tensors[i].data.length +
         model.tensors[i].gradientData.length +
-        model.tensors[i].velocity_momentum.length * 2 +
+        model.tensors[i].velocity_momentum.length +
+        model.tensors[i].velocity_momentum.length +
         model.tensors[i].children.length,
       offset +
         model.tensors[i].data.length +
         model.tensors[i].gradientData.length +
-        model.tensors[i].velocity_momentum.length * 2 +
+        model.tensors[i].velocity_momentum.length +
+        model.tensors[i].velocity_momentum.length +
         model.tensors[i].children.length +
         model.tensors[i].parents.length,
       offset +
         model.tensors[i].data.length +
         model.tensors[i].gradientData.length +
-        model.tensors[i].velocity_momentum.length * 2 +
+        model.tensors[i].velocity_momentum.length +
+        model.tensors[i].velocity_momentum.length +
         model.tensors[i].children.length +
         model.tensors[i].parents.length +
         model.tensors[i].partialDerivativeLeft.length,
       offset +
         model.tensors[i].data.length +
         model.tensors[i].gradientData.length +
-        model.tensors[i].velocity_momentum.length * 2 +
+        model.tensors[i].velocity_momentum.length +
+        model.tensors[i].velocity_momentum.length +
         model.tensors[i].children.length +
         model.tensors[i].parents.length +
         model.tensors[i].partialDerivativeLeft.length +
@@ -258,7 +297,8 @@ function setUpModel(
       offset +
         model.tensors[i].data.length +
         model.tensors[i].gradientData.length +
-        model.tensors[i].velocity_momentum.length * 2 +
+        model.tensors[i].velocity_momentum.length +
+        model.tensors[i].velocity_momentum.length +
         model.tensors[i].children.length +
         model.tensors[i].parents.length +
         model.tensors[i].partialDerivativeLeft.length +
@@ -269,7 +309,8 @@ function setUpModel(
       offset +
       model.tensors[i].data.length +
       model.tensors[i].gradientData.length +
-      model.tensors[i].velocity_momentum.length * 2 +
+      model.tensors[i].velocity_momentum.length +
+      model.tensors[i].velocity_momentum.length +
       model.tensors[i].children.length +
       model.tensors[i].parents.length +
       model.tensors[i].partialDerivativeLeft.length +
@@ -282,7 +323,7 @@ function setUpModel(
 
   // build sequence for the backwards pass for computing the partialDerivatives
   let queueCount = [];
-  for (let i = 0; i < model.numTensors + 1; i++) {
+  for (let i = 0; i < model.numTensors; i++) {
     queueCount.push(0);
   }
   const backwardTape = [];
@@ -304,11 +345,11 @@ function setUpModel(
       }
     }
   }
-  backwardTape[0] = model.numTensors + 1;
+  backwardTape[0] = model.numTensors;
 
   // build sequence for the backwards pass for computing the gradients
   queueCount = [];
-  for (let i = 0; i < model.numTensors + 1; i++) {
+  for (let i = 0; i < model.numTensors; i++) {
     queueCount.push(0);
   }
   const gradientTape = [];
@@ -330,7 +371,7 @@ function setUpModel(
 
   // build sequence for the forwards pass
   queueCount = [];
-  for (let i = 0; i < model.numTensors + 1; i++) {
+  for (let i = 0; i < model.numTensors; i++) {
     queueCount.push(0);
   }
   const forwardTape = [];
@@ -349,6 +390,9 @@ function setUpModel(
     }
   }
   forwardTape.reverse();
+  console.log(forwardTape);
+  console.log(backwardTape);
+  console.log(gradientTape);
 
   // // convert everything to the proper data type. here: f32
   const f32TensorOffsets = new Float32Array(tensorOffsets);
@@ -356,6 +400,15 @@ function setUpModel(
   const f32BackwardTape = new Float32Array(backwardTape);
   const f32GradientTape = new Float32Array(gradientTape);
 
+  for (let i = 0; i < gradientTape.length; i = i + 2) {
+    const curr = model.tensors[gradientTape[i]];
+    const child = model.tensors[gradientTape[i + 1]];
+    console.log(' ');
+    console.log(curr.typestring + ' -> ' + child.typestring);
+    console.log('curr is rightmultiplicator: ' + curr.isRightMultiplicator);
+  }
+
+  console.log(model);
   MatMul(
     setAvgError,
     setEdgesActive,

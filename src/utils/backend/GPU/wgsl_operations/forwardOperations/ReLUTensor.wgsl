@@ -10,12 +10,15 @@ fn ReLUTensor(gId : vec3u, t : u32){
         return; // Guard against out-of-bounds work group sizes
     }
 
-    let resultCell = vec2(gId.x, gId.y);
-    let index = resultCell.y + resultCell.x * curr_n;
-    if(ping.entries[parentSingle_DataFirstIndex + index] >= 0){
+    let index = gId.y + gId.x * curr_n;
+    if(ping.entries[parentSingle_DataFirstIndex + index] >= f32(0)){
         ping.entries[curr_DataFirstIndex + index] = ping.entries[parentSingle_DataFirstIndex + index];
     }
     else{
         ping.entries[curr_DataFirstIndex + index] = f32(0);
     }
+
+    // clean up the gradient data
+    let curr_GradientData = u32(offset.tensor[t].gradientData);
+    ping.entries[curr_GradientData + index] = f32(0);
 }

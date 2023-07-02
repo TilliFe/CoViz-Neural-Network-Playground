@@ -17,7 +17,7 @@
       "initialization": "zeros",
       "rows": 1,
       "cols": 1,
-      "requiresGradient": true,
+      "requiresGradient": false,
       "parents": [],
       "children": [],
       "isLast": false,

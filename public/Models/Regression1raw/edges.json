@@ -81,21 +81,53 @@
     "animated": false
   },
   {
-    "source": "7",
+    "source": "13",
+    "sourceHandle": "Source",
+    "target": "15",
+    "targetHandle": "Left",
+    "type": "custom",
+    "id": "reactflow__edge-13Source-15Left",
+    "selected": false
+  },
+  {
+    "source": "14",
+    "sourceHandle": "Source",
+    "target": "15",
+    "targetHandle": "Right",
+    "type": "custom",
+    "id": "reactflow__edge-14Source-15Right",
+    "selected": false
+  },
+  {
+    "source": "18",
     "sourceHandle": "Source",
     "target": "8",
     "targetHandle": "Left",
     "type": "custom",
-    "id": "reactflow__edge-7Source-8Left",
-    "animated": false
+    "id": "reactflow__edge-18Source-8Left"
+  },
+  {
+    "source": "15",
+    "sourceHandle": "Source",
+    "target": "17",
+    "targetHandle": "Right",
+    "type": "custom",
+    "id": "reactflow__edge-15Source-17Right"
   },
   {
     "source": "6",
     "sourceHandle": "Source",
+    "target": "17",
+    "targetHandle": "Left",
+    "type": "custom",
+    "id": "reactflow__edge-6Source-17Left"
+  },
+  {
+    "source": "17",
+    "sourceHandle": "Source",
     "target": "8",
     "targetHandle": "Right",
     "type": "custom",
-    "id": "reactflow__edge-6Source-8Right",
-    "animated": false
+    "id": "reactflow__edge-17Source-8Right"
   }
 ]
