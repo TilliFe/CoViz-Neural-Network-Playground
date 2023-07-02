@@ -21,7 +21,7 @@ fn updateData(gId : vec3u, t : u32){
 
     let index = gId.x * curr_n + gId.y;
 
-    if(curr_RequiresGradient == u32(1)){
+    if(curr_RequiresGradient == u32(1) && tensorType == u32(0)){
         // ping.entries[curr_velocity_momentum + index] = (momentum * ping.entries[curr_velocity_momentum + index] + learningRate * ping.entries[curr_GradientData + index] ); // / ( f32(1) - pow(mommomentum, iteration ));
         // // ping.entries[curr_velocity_RMSProp + index] = (f32(0.999) * ping.entries[curr_velocity_RMSProp + index] + (f32(1) - f32(0.999)) * pow(ping.entries[curr_GradientData + index], f32(2) ) ) / ( f32(1) - pow(f32(0.999), iteration ));
         // ping.entries[curr_Data + index] -=  ping.entries[curr_velocity_momentum + index]; // / ( sqrt(ping.entries[curr_velocity_RMSProp + index]) + f32(0.00000001) );
@@ -38,5 +38,5 @@ fn updateData(gId : vec3u, t : u32){
         ping.entries[curr_Data + index] -= learningRate * ping.entries[curr_GradientData + index];
     }
     
-    // ping.entries[curr_GradientData + index] = f32(0);
+    ping.entries[curr_GradientData + index] = f32(0.0);
 }

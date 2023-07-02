@@ -20,15 +20,16 @@ function setUpModel(
 ) {
   if (tensors.length == 0) {
     return;
-  }    
+  }      
+   
 
-
+  
   const model = new Model();
   model.numTensors = tensors.length;
 
   for (let i = 0; i < tensors.length; ++i) {
     const type = tensors[i].type;
-    const tensorId = Number(tensors[i].id);
+    const tensorId = tensors[i].id;
     const rows = tensors[i].rows;
     const cols = tensors[i].cols;
     const requiresGradient = tensors[i].requiresGradient;
@@ -38,7 +39,8 @@ function setUpModel(
     tensor.parents = tensors[i].parents;
     tensor.children = tensors[i].children;
     tensor.isRightMultiplicator = tensors[i].isRightMultiplicator;
-
+      
+    
     if (initialization == 'random' && type == 'none') {
       tensor.setRandomData();
     } else if (initialization == 'ones' && type == 'none') {
@@ -50,13 +52,14 @@ function setUpModel(
     if (tensors[i].isInput) {
       tensor.isInput = true;
       data.setInputTensor(tensor);
-      tensor.requiresGradient = false;
+      tensor.requiresGradient = 0;
+      model.inputTensor = tensorId;
     }
     if (tensors[i].isTrue) {
       tensor.isTrue = true;
       data.setTrueTensor(tensor);
       model.trueTensor = tensorId;
-      tensor.requiresGradient = false;
+      tensor.requiresGradient = 1;
     }
     if (tensors[i].isOutput) {
       model.outputTensor = tensorId;
@@ -100,12 +103,12 @@ function setUpModel(
       model.tensors[i].partialDerivativeRight = new Array<number>(1).fill(0);
       model.tensors[par1].isRightMultiplicator = 0;
       model.tensors[par2].isRightMultiplicator = 1;
-      model.tensors[par1].partner_rows = Number(m);
-      model.tensors[par1].partner_cols = Number(n);
-      model.tensors[par1].partner_id = Number(par2);
-      model.tensors[par2].partner_rows = Number(m);
-      model.tensors[par2].partner_cols = Number(n);
-      model.tensors[par2].partner_id = Number(par1);
+      model.tensors[par1].partner_rows = m;
+      model.tensors[par1].partner_cols = n;
+      model.tensors[par1].partner_id = par2;
+      model.tensors[par2].partner_rows = m;
+      model.tensors[par2].partner_cols = n;
+      model.tensors[par2].partner_id = par1;
     }
 
     // multiply
@@ -117,16 +120,15 @@ function setUpModel(
       const k = model.tensors[par2].cols;
       model.tensors[i].partialDerivativeLeft = new Array<number>(1).fill(0);
       model.tensors[i].partialDerivativeRight = new Array<number>(1).fill(0);
-      model.tensors[par1].partner_rows = Number(n);
-      model.tensors[par1].partner_cols = Number(k);
-      model.tensors[par1].partner_id = Number(par2);
-      model.tensors[par2].partner_rows = Number(m);
-      model.tensors[par2].partner_cols = Number(n);
-      model.tensors[par2].partner_id = Number(par1);
+      model.tensors[par1].partner_rows = n;
+      model.tensors[par1].partner_cols = k;
+      model.tensors[par1].partner_id = par2;
+      model.tensors[par2].partner_rows = m;
+      model.tensors[par2].partner_cols = n;
+      model.tensors[par2].partner_id = par1;
       model.tensors[par1].isRightMultiplicator = 0;
       model.tensors[par2].isRightMultiplicator = 1;
     }
-
 
 
     // ReLU
@@ -157,14 +159,14 @@ function setUpModel(
       const n = model.tensors[par1].cols;
       model.tensors[i].partialDerivativeLeft = new Array<number>(1).fill(0);
       model.tensors[i].partialDerivativeRight = new Array<number>(1).fill(0);
-      model.tensors[par1].partner_rows = Number(m);
-      model.tensors[par1].partner_cols = Number(n);
-      model.tensors[par1].partner_id = Number(par2);
-      model.tensors[par2].partner_rows = Number(m);
-      model.tensors[par2].partner_cols = Number(n);
-      model.tensors[par2].partner_id = Number(par1);
+      model.tensors[par1].partner_rows = m;
+      model.tensors[par1].partner_cols = n;
+      model.tensors[par1].partner_id = par2;
+      model.tensors[par2].partner_rows = m;
+      model.tensors[par2].partner_cols = n;
+      model.tensors[par2].partner_id = par1;
     }
-    
+
     // OneHot
     else if (model.tensors[i].type == 6) {
     }
@@ -177,8 +179,8 @@ function setUpModel(
       const n = model.tensors[par1].cols;
       model.tensors[i].partialDerivativeLeft = new Array<number>(1).fill(0);
       model.tensors[i].partialDerivativeRight = new Array<number>(1).fill(0);
-      model.tensors[par1].partner_id = Number(par2);
-      model.tensors[par2].partner_id = Number(par1);
+      model.tensors[par1].partner_id = par2;
+      model.tensors[par2].partner_id = par1;
       model.tensors[par1].isRightMultiplicator = 0;
       model.tensors[par2].isRightMultiplicator = 1;
     }
@@ -191,8 +193,8 @@ function setUpModel(
       // const n = model.tensors[par1].cols;
       // const m_k = model.tensors[par2].rows;
       // const n_k = model.tensors[par2].cols;
-      // model.tensors[i].partialDerivativeLeft = new Array<number>(1).fill(0);
-      // model.tensors[i].partialDerivativeRight = new Array<number>(1).fill(0);
+      // model.tensors[i].partialDerivativeLeft = new Array<Number>(1).fill(0);
+      // model.tensors[i].partialDerivativeRight = new Array<Number>(1).fill(0);
     }
   }
 
@@ -233,13 +235,17 @@ function setUpModel(
     flatData.push(model.tensors[i].metaDims.length);
     flatData = flatData.concat(Array.from(model.tensors[i].metaDims));
 
-    if (i == data.tensorInputId) {
-      data.inputOffset = offset + 6;
-    }
-    if (i == data.tensorTrueId) {
-      data.trueOffset = offset + 6;
-    }
 
+
+    // if (i == data.tensorInputId) {
+    //   data.inputOffset = offset + 6;
+    // }
+    // if (i == data.tensorTrueId) {
+    //   data.trueOffset = offset + 6;
+    // }
+
+
+    
     tensorOffsets = tensorOffsets.concat([
       offset,
       ++offset,
@@ -261,35 +267,29 @@ function setUpModel(
       offset +
         model.tensors[i].data.length +
         model.tensors[i].gradientData.length +
-        model.tensors[i].velocity_momentum
-          .length /* times 2 because we have the velocity_RMSProp as well */ +
-        model.tensors[i].velocity_momentum.length,
+        model.tensors[i].velocity_momentum.length * 2, // times 2 because we have the velocity_RMSProp as well
       offset +
         model.tensors[i].data.length +
         model.tensors[i].gradientData.length +
-        model.tensors[i].velocity_momentum.length +
-        model.tensors[i].velocity_momentum.length +
+        model.tensors[i].velocity_momentum.length * 2 +
         model.tensors[i].children.length,
       offset +
         model.tensors[i].data.length +
         model.tensors[i].gradientData.length +
-        model.tensors[i].velocity_momentum.length +
-        model.tensors[i].velocity_momentum.length +
+        model.tensors[i].velocity_momentum.length * 2 +
         model.tensors[i].children.length +
         model.tensors[i].parents.length,
       offset +
         model.tensors[i].data.length +
         model.tensors[i].gradientData.length +
-        model.tensors[i].velocity_momentum.length +
-        model.tensors[i].velocity_momentum.length +
+        model.tensors[i].velocity_momentum.length * 2 +
         model.tensors[i].children.length +
         model.tensors[i].parents.length +
         model.tensors[i].partialDerivativeLeft.length,
       offset +
         model.tensors[i].data.length +
         model.tensors[i].gradientData.length +
-        model.tensors[i].velocity_momentum.length +
-        model.tensors[i].velocity_momentum.length +
+        model.tensors[i].velocity_momentum.length * 2 +
         model.tensors[i].children.length +
         model.tensors[i].parents.length +
         model.tensors[i].partialDerivativeLeft.length +
@@ -297,8 +297,7 @@ function setUpModel(
       offset +
         model.tensors[i].data.length +
         model.tensors[i].gradientData.length +
-        model.tensors[i].velocity_momentum.length +
-        model.tensors[i].velocity_momentum.length +
+        model.tensors[i].velocity_momentum.length * 2 +
         model.tensors[i].children.length +
         model.tensors[i].parents.length +
         model.tensors[i].partialDerivativeLeft.length +
@@ -309,8 +308,7 @@ function setUpModel(
       offset +
       model.tensors[i].data.length +
       model.tensors[i].gradientData.length +
-      model.tensors[i].velocity_momentum.length +
-      model.tensors[i].velocity_momentum.length +
+      model.tensors[i].velocity_momentum.length * 2 +
       model.tensors[i].children.length +
       model.tensors[i].parents.length +
       model.tensors[i].partialDerivativeLeft.length +

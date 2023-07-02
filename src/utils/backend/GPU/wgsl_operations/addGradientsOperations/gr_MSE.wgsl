@@ -13,5 +13,5 @@ fn gr_MSE(gId : vec3u, currTensor : u32, childTensor: u32){
     let curr_GradientData = u32(offset.tensor[currTensor].gradientData);
 
     let index = gId.y + gId.x * curr_n;
-    ping.entries[curr_GradientData + index] = (f32(2) / f32(curr_m)) * (ping.entries[curr_Data + index] - ping.entries[curr_partner_data + index]);
+    ping.entries[curr_GradientData + index] = (f32(2.0) / f32(curr_m)) * (ping.entries[curr_Data + index] - ping.entries[curr_partner_data + index]);
 }

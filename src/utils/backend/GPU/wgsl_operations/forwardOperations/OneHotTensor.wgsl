@@ -23,15 +23,15 @@ fn OneHotTensor(gId : vec3u, t : u32){
         let parentIdx = parentSingle_DataFirstIndex + resultCell.y + i * curr_n;  // sum column wise
         let currIdx = curr_DataFirstIndex + resultCell.y + i * curr_n;  // sum column wise
         if(i == maxIndex){
-            ping.entries[currIdx] = f32(1);
+            ping.entries[currIdx] = f32(1.0);
         }
         else{
-            ping.entries[currIdx] = f32(0);
+            ping.entries[currIdx] = f32(0.0);
         }
     }
 
     // clean up the gradient data
-    let index = gId.y + gId.x * curr_n;
-    let curr_GradientData = u32(offset.tensor[t].gradientData);
-    ping.entries[curr_GradientData + index] = f32(0);
+    // let index = gId.y + gId.x * curr_n;
+    // let curr_GradientData = u32(offset.tensor[t].gradientData);
+    // ping.entries[curr_GradientData + index] = f32(0.0);
 }

@@ -16,7 +16,7 @@ fn computeGradients(gId : vec3u, t : u32){
         gr_softmaxCE(gId,t,childTensor);
     }
     else if(child_TensorType == u32(7)){
-        gr_MSE(gId,t,childTensor); 
+        gr_MSE(gId,t,childTensor);
     }
     else if(child_TensorType == u32(8)){
         gr_correlate(gId,t,childTensor); 

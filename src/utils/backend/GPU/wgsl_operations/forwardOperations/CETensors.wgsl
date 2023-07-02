@@ -8,8 +8,7 @@ fn CETensors(gId : vec3u, t : u32){
     let parentPred_DataFirstIndex = u32(offset.tensor[curr_ParentPred].data);
     let parentTrue_m = u32(ping.entries[u32(offset.tensor[curr_ParentTrue].rows)]);
     let parentTrue_n = u32(ping.entries[u32(offset.tensor[curr_ParentTrue].cols)]);
-
-   
+    let curr_GradientData = u32(offset.tensor[t].gradientData);   
 
     if (gId.x >= u32(1) || gId.y >= u32(1)) {
         return; // Guard against out-of-bounds work group sizes
@@ -33,6 +32,5 @@ fn CETensors(gId : vec3u, t : u32){
     accuracies[currIteration] = ce;
 
     // clean up the gradient data
-    let curr_GradientData = u32(offset.tensor[t].gradientData);
-    ping.entries[curr_GradientData + index] = f32(0);
+    // ping.entries[curr_GradientData + index] = f32(0.0);
 }

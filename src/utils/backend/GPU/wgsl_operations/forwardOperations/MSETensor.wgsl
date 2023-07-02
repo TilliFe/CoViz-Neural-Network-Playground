@@ -8,6 +8,7 @@ fn MSETensor(gId : vec3u, t : u32){
     let parentPred_DataFirstIndex = u32(offset.tensor[curr_ParentPred].data);
     let parentTrue_m = u32(ping.entries[u32(offset.tensor[curr_ParentTrue].rows)]);
     let parentTrue_n = u32(ping.entries[u32(offset.tensor[curr_ParentTrue].cols)]);
+    let curr_GradientData = u32(offset.tensor[t].gradientData);
 
     if (gId.x >= u32(1) || gId.y >= u32(1)) {
         return; // Guard against out-of-bounds work group sizes
@@ -18,7 +19,7 @@ fn MSETensor(gId : vec3u, t : u32){
         for (var j = 0u; j < parentTrue_n; j = j + 1u) {
             let indexTrue = parentTrue_DataFirstIndex + i * parentTrue_n + j;
             let indexPred = parentPred_DataFirstIndex + i * parentTrue_n + j;
-            mse += pow(ping.entries[indexPred] - ping.entries[indexTrue] , f32(2));
+            mse += pow(ping.entries[indexPred] - ping.entries[indexTrue] , f32(2.0));
         }
     }
     mse = mse / ( f32(parentTrue_n) * f32(parentTrue_m));
@@ -30,7 +31,6 @@ fn MSETensor(gId : vec3u, t : u32){
     accuracies[currIteration] = mse;
 
 
-    // clean up the gradient data
-    let curr_GradientData = u32(offset.tensor[t].gradientData);
-    ping.entries[curr_GradientData + index] = f32(0);
+    // clean up the gradient data    
+    // ping.entries[curr_GradientData + index] = f32(0.0);
 }

@@ -204,8 +204,8 @@ export class Model {
   // public
   tensors: Array<Tensor> = [];
   numTensors = -1;
-  lastTensor = 0;
-  // inputTensor : number = 0;
+  lastTensor = -1;
+  inputTensor = -1;
   learningRate = 0.3;
   momentum = 0;
   outputTensor = 0;

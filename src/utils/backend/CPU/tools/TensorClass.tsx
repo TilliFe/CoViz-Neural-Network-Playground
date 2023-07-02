@@ -19,7 +19,7 @@ export class Tensor {
     this.rows = _rows;
     this.cols = _cols;
     this.metaDims = _metaDims;
-    this.requiresGradient = _requiresGradient; // == true ? 1 : 0;
+    this.requiresGradient = true ? 1 : 0;
     this.data = new Array<number>(_rows * _cols).fill(0);
     // this.gradientData = _requiresGradient ? new Array<number>(_rows * _cols).fill(0) : new Array<number>(0);
     this.gradientData = new Array<number>(_rows * _cols).fill(0);
@@ -143,7 +143,7 @@ export class Tensor {
   cols = 1;
   metaDims = [1];
   data = [];
-  requiresGradient: boolean
+  requiresGradient : number = 1;
   isRightMultiplicator :  number = 0;
   gradientData = [];
   velocity_momentum = [];
@@ -153,10 +153,10 @@ export class Tensor {
   partialDerivativeLeft = [];
   partialDerivativeRight = [];
 
-  partner_rows = 1;
-  partner_cols = 1;
+  partner_rows :  number = 0;
+  partner_cols :  number = 0;
 
-  partner_id = -1;
+  partner_id :  number = 0;
 
   isInput = false;
   isOutput = false;

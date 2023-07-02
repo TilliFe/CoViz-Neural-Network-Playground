@@ -1,10 +1,9 @@
-export function getxValues(arrayBuffer, data, Offsets) {
+export function getxValues(arrayBuffer, model,Offsets) {
   const xValues = [];
-  const t = data.tensorInputId;
+  const t = model.inputTensor;
   const tensorIndex = Offsets[3 + t * 18];
   const rows = arrayBuffer[tensorIndex + 3];
   const cols = arrayBuffer[tensorIndex + 4];
-  console.log('rows', rows, 'cols', cols	)
   const dataIndexStart = Offsets[3 + t * 18 + 8];
   for (let j = 0; j < cols; j++) {
     for (let i = 0; i < rows; i++) {

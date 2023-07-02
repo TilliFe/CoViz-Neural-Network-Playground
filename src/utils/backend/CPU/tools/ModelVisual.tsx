@@ -9,6 +9,7 @@ export class Model {
   outputTensor = 0;
   trueTensor = 0;
   batchSize: number;
+  inputTensor: number;
 
   tensor(
     _type: string,
